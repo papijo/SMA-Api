@@ -41,13 +41,37 @@ router.delete("/:id", async (req, res) => {
 });
 
 //Get a User
-router.get("/:id", async (req, res) => {
+router.get("/", async (req, res) => {
+  const userId = req.query.userId;
+  const username = req.query.username;
   try {
-    const user = await User.findById(req.params.id);
-    const { password, updatedAt, ...other } = user._doc;
+    const user = userId
+      ? await User.findById(userId)
+      : await User.findOne({ username: username });
+    const { updatedAt, ...other } = user._doc;
     res.status(200).json(other);
   } catch (err) {
     res.status(500).json(err);
+  }
+});
+
+// Get Friends
+router.get("/friends/:userId", async (req, res) => {
+  try {
+    const user = await User.findById(req.params.userId);
+    const friends = await Promise.all(
+      user.following.map((friendId) => {
+        return User.findById(friendId);
+      })
+    );
+    let friendList = [];
+    friends.map((friend) => {
+      const { _id, name, username, profilePicture } = friend;
+      friendList.push({ _id, name, username, profilePicture });
+    });
+    res.status(200).json(friendList);
+  } catch (error) {
+    res.status(500).json(error);
   }
 });
 
